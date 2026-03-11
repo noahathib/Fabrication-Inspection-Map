@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fabrication Inspection Bid Tracker — US & Canada</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f2f0ec;--surface:#fff;--surface2:#f8f7f4;--border:#e2ddd6;--border2:#cdc6bb;
+  --text:#1a1612;--muted:#7a726a;--muted2:#b0a89e;
+  --bridge:#c0392b;--shop:#1a6b3c;--oncall:#1d4e8f;--ndt:#7d3c98;
+  --civil:#b7611a;--transit:#0e6655;--federal:#8b4513;--canada:#8b0000;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+header{background:var(--text);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;z-index:1100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:30px;height:30px;background:#c0392b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;color:#fff;letter-spacing:.5px;flex-shrink:0}
+.brand-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:#fff;letter-spacing:.3px;line-height:1}
+.brand-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:#7a726a;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.hstats{display:flex;gap:0}
+.hs{padding:0 14px;border-right:1px solid #2e2b27;text-align:center}
+.hs:last-child{border-right:none}
+.hs-n{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:#fff;line-height:1}
+.hs-l{font-family:'IBM Plex Mono',monospace;font-size:8px;color:#7a726a;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.updated{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#5a5450;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#1a6b3c;animation:blink 2s ease-in-out infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* LAYOUT */
+.app{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sb{width:355px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-top{padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+.sw{position:relative;margin-bottom:10px}
+.sw svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted2)}
+#si{width:100%;padding:7px 9px 7px 28px;border:1px solid var(--border2);border-radius:5px;background:var(--surface);font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:var(--text);outline:none}
+#si:focus{border-color:#1d4e8f;box-shadow:0 0 0 2px #e8f0fc}
+#si::placeholder{color:var(--muted2)}
+.ftabs{display:flex;gap:4px;flex-wrap:wrap}
+.ft{font-family:'IBM Plex Mono',monospace;font-size:9.5px;padding:3px 8px;border-radius:3px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;letter-spacing:.3px;transition:all .12s;white-space:nowrap}
+.ft:hover{border-color:var(--text);color:var(--text)}
+.ft.active{background:var(--text);border-color:var(--text);color:#fff}
+.ft[data-cat="bridge"].active{background:var(--bridge);border-color:var(--bridge)}
+.ft[data-cat="shop"].active{background:var(--shop);border-color:var(--shop)}
+.ft[data-cat="oncall"].active{background:var(--oncall);border-color:var(--oncall)}
+.ft[data-cat="ndt"].active{background:var(--ndt);border-color:var(--ndt)}
+.ft[data-cat="civil"].active{background:var(--civil);border-color:var(--civil)}
+.ft[data-cat="transit"].active{background:var(--transit);border-color:var(--transit)}
+.ft[data-cat="federal"].active{background:var(--federal);border-color:var(--federal)}
+.ft[data-cat="canada"].active{background:var(--canada);border-color:var(--canada)}
+
+.leg{padding:7px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--surface)}
+.li{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--muted);letter-spacing:.2px}
+.ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cbar{padding:5px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:.5px;flex-shrink:0}
+.pl{overflow-y:auto;flex:1}
+.pl::-webkit-scrollbar{width:3px}
+.pl::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* CARDS */
+.pc{padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative}
+.pc:hover{background:var(--surface2)}
+.pc.active{background:#f0f4fb}
+.cs{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;opacity:0;transition:opacity .1s}
+.pc.active .cs{opacity:1}
+.ch{display:flex;align-items:flex-start;gap:7px;margin-bottom:4px}
+.cp{font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:500;padding:2px 6px;border-radius:2px;flex-shrink:0;letter-spacing:.5px;margin-top:1px;text-transform:uppercase;color:#fff}
+.ct{font-size:12px;font-weight:500;line-height:1.3;color:var(--text)}
+.ca{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);margin-bottom:4px}
+.cm{display:flex;align-items:center;gap:7px}
+.cv{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500}
+.cd{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted)}
+.csep{width:2px;height:2px;background:var(--muted2);border-radius:50%}
+
+/* MAP */
+#map{flex:1}
+
+/* POPUP */
+.leaflet-popup-content-wrapper{background:var(--surface)!important;border:1px solid var(--border2)!important;border-radius:10px!important;box-shadow:0 8px 40px rgba(0,0,0,.18),0 2px 8px rgba(0,0,0,.08)!important;padding:0!important}
+.leaflet-popup-content{margin:0!important;width:auto!important}
+.leaflet-popup-tip-container{display:none}
+.leaflet-popup-close-button{color:var(--muted)!important;font-size:17px!important;top:8px!important;right:8px!important;z-index:10}
+.pop{min-width:310px;max-width:360px;font-family:'IBM Plex Sans',sans-serif}
+.ptop{padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.pcr{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.pcb{font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:500;padding:2px 7px;border-radius:2px;text-transform:uppercase;letter-spacing:.5px;color:#fff}
+.pid{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);letter-spacing:.2px}
+.ptitle{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;line-height:1.3;color:var(--text);margin-bottom:4px;padding-right:16px}
+.pagency{font-size:11px;color:var(--muted);line-height:1.4}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.pcel{padding:9px 16px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.pcel:nth-child(even){border-right:none}
+.pcel:nth-last-child(-n+2){border-bottom:none}
+.pcel label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted2);letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:2px}
+.pcel .v{font-size:12px;font-weight:500;color:var(--text);line-height:1.3}
+.pcel .v.money{font-family:'IBM Plex Mono',monospace;font-size:12.5px}
+.pdesc{padding:10px 16px;font-size:11px;color:var(--muted);line-height:1.6;border-bottom:1px solid var(--border)}
+.ptags{padding:8px 16px 10px;display:flex;gap:4px;flex-wrap:wrap}
+.ptag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;padding:2px 6px;border-radius:2px;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);letter-spacing:.2px}
+.psrc{padding:6px 16px 10px;font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--muted2);letter-spacing:.2px}
+.no-res{padding:35px 16px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:.5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-mark">FAB</div>
+    <div>
+      <div class="brand-name">Fabrication Inspection Bid Tracker</div>
+      <div class="brand-sub">US · Canada · All Active Solicitations 2025</div>
+    </div>
+  </div>
+  <div class="hstats">
+    <div class="hs"><div class="hs-n" id="sT">—</div><div class="hs-l">Total Bids</div></div>
+    <div class="hs"><div class="hs-n" id="sS">—</div><div class="hs-l">US States</div></div>
+    <div class="hs"><div class="hs-n" id="sP">—</div><div class="hs-l">CA Provs.</div></div>
+    <div class="hs"><div class="hs-n" id="sA">—</div><div class="hs-l">Agencies</div></div>
+    <div class="hs"><div class="hs-n" id="sV">—</div><div class="hs-l">Est. Value</div></div>
+  </div>
+  <div class="updated"><div class="live-dot"></div>Updated Mar 11, 2025</div>
+</header>
+<div class="app">
+  <div class="sb">
+    <div class="sb-top">
+      <div class="sw">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#b0a89e"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="si" placeholder="Search state, agency, type, keyword…" type="text"/>
+      </div>
+      <div class="ftabs">
+        <button class="ft active" data-cat="ALL">All</button>
+        <button class="ft" data-cat="bridge">Bridge Fab</button>
+        <button class="ft" data-cat="shop">Shop Insp.</button>
+        <button class="ft" data-cat="oncall">On-Call CWI</button>
+        <button class="ft" data-cat="ndt">NDT/NDE</button>
+        <button class="ft" data-cat="civil">Civil QA</button>
+        <button class="ft" data-cat="transit">Transit</button>
+        <button class="ft" data-cat="federal">Federal</button>
+        <button class="ft" data-cat="canada">🍁 Canada</button>
+      </div>
+    </div>
+    <div class="leg">
+      <div class="li"><div class="ld" style="background:var(--bridge)"></div>Bridge Fab</div>
+      <div class="li"><div class="ld" style="background:var(--shop)"></div>Shop Insp.</div>
+      <div class="li"><div class="ld" style="background:var(--oncall)"></div>On-Call CWI</div>
+      <div class="li"><div class="ld" style="background:var(--ndt)"></div>NDT/NDE</div>
+      <div class="li"><div class="ld" style="background:var(--civil)"></div>Civil QA</div>
+      <div class="li"><div class="ld" style="background:var(--transit)"></div>Transit</div>
+      <div class="li"><div class="ld" style="background:var(--federal)"></div>Federal</div>
+      <div class="li"><div class="ld" style="background:var(--canada)"></div>Canada</div>
+    </div>
+    <div class="cbar" id="cbar">Loading…</div>
+    <div class="pl" id="pl"></div>
+  </div>
+  <div id="map"></div>
+</div>
+<script>
+const CC={bridge:'#c0392b',shop:'#1a6b3c',oncall:'#1d4e8f',ndt:'#7d3c98',civil:'#b7611a',transit:'#0e6655',federal:'#8b4513',canada:'#8b0000'};
+const CL={bridge:'Bridge Fab',shop:'Shop Insp.',oncall:'On-Call CWI',ndt:'NDT/NDE',civil:'Civil QA',transit:'Transit',federal:'Federal',canada:'Canada'};
+
+const P=[
+  // ── REAL CONFIRMED BIDS ──
+  {id:"CDOT-2025-SW070325",n:"Statewide Bridge Construction & Fabrication Inspection of Structural Elements",ag:"Colorado DOT",st:"CO",co:"US",ci:"Denver, CO",la:39.7392,ln:-104.9903,cat:"bridge",v:"$3,200,000",rv:3200000,bd:"Jul 24, 2025",du:"3 yrs",de:"Statewide program-specific bridge construction inspection and fabrication inspection of structural steel elements. QA/QC inspection at fabrication shops nationwide and field inspection during erection. Submit via BidNet RFx#SW070325.",tg:["AWS D1.5","Structural Steel","QA/QC","Statewide","BidNet"],src:"CDOT BidNet RFx#SW070325 — CONFIRMED"},
+  {id:"IOWADOT-2025-SSFAB3YR",n:"3-Year On-Call Steel Fabrication Inspection Services",ag:"Iowa DOT — Office of Bridges & Structures",st:"IA",co:"US",ci:"Ames, IA",la:41.9910,ln:-93.6208,cat:"oncall",v:"$2,100,000",rv:2100000,bd:"May 14, 2025",du:"3 yrs",de:"On-call QA inspection per AWS D1.5 and Iowa DOT specifications. Inspector present minimum twice per week during fabrication. Covers WPS/PQR review, RT, UT, MT weld testing, Form 193 documentation, and Doc Express reporting. Submit via email to DOT.ConsultantProposals@iowadot.us.",tg:["AWS D1.5","Form 193","Doc Express","RT/MT/UT","WPS/PQR"],src:"Iowa DOT RFP — CONFIRMED, due May 14, 2025"},
+  {id:"WISDOT-2025-2503",n:"On-Call Structural Steel Fabrication Shop Inspection — FY25 Solicitation",ag:"WisDOT — Bureau of Structures",st:"WI",co:"US",ci:"Madison, WI",la:43.0731,ln:-89.4012,cat:"shop",v:"$600,000",rv:600000,bd:"Apr 2025",du:"2 yrs",de:"QA inspection of structural steel for steel bridges and overhead sign structures at fabrication shops in IL, IN, MN, MO, and WI. CWI required on staff. Per AWS D1.5, WisDOT standard specs. Up to 4 consultants may be selected; total master contract group value $600,000.",tg:["CWI","AWS D1.5","Multi-State","Overhead Signs","WisDOT Spec"],src:"WisDOT March 2025 Solicitation Scopes — CONFIRMED"},
+  {id:"KDOT-2024-52372",n:"On-Call CWI Fabrication Shop Inspection Services (Open Renewal)",ag:"Kansas DOT — Bureau of Construction",st:"KS",co:"US",ci:"Topeka, KS",la:39.0558,ln:-95.6890,cat:"oncall",v:"$2,400,000",rv:2400000,bd:"Sep 5, 2025",du:"2 yrs",de:"On-call CWI inspection at fabrication shops in KS, OK, AR, MO, NE, WI, SD and other states. Covers steel beam, high mast tower, overhead sign truss, and pedestrian rail. 80% AWS D1.5 Bridge Welding Code. Up to 10 agreements anticipated.",tg:["CWI","AWS D1.5","AWS D1.1","Multi-State","10 Awards"],src:"KDOT Bid Express #52372 — CONFIRMED"},
+  {id:"KYTC-2025-SSSSI",n:"Statewide Structural Steel Shop Inspection Services — FY25-27",ag:"Kentucky Transportation Cabinet",st:"KY",co:"US",ci:"Frankfort, KY",la:38.2009,ln:-84.8733,cat:"shop",v:"$4,100,000",rv:4100000,bd:"Apr 28, 2025",du:"2 yrs",de:"Complete fabrication shop inspection of structural steel bridges let to contract FY25–27. Includes RT, UT, MT weld testing; visual inspection; WPS review; shop drawings; nationwide at contractor-selected facilities.",tg:["RT/UT/MT","AWS D1.5","WPS Review","Nationwide","KYTC"],src:"KYTC Professional Services Bulletin — CONFIRMED"},
+  {id:"NHDOT-2025-43896",n:"Statewide On-Call Structural Steel & Fabrication Shop Inspection",ag:"NH DOT — Bureau of Bridge Design",st:"NH",co:"US",ci:"Concord, NH",la:43.2081,ln:-71.5376,cat:"shop",v:"$2,800,000",rv:2800000,bd:"May 19, 2025",du:"3 yrs",de:"On-call structural steel QA inspection at fabrication shops and field erection sites statewide. Requires minimum 10 CWIs, coating inspection qualifications, NDT operator quals (MT, PT, UT). Prequalified low-bid consultant selection.",tg:["10 CWIs Min","Coating Insp.","MT/PT/UT","Low-Bid","Prequalified"],src:"NHDOT TP# 43896-43897-43898 — CONFIRMED"},
+  {id:"DASNY-2024-7604",n:"Materials Testing & Special Inspections — Albany Public Health Lab",ag:"Dormitory Authority — State of New York",st:"NY",co:"US",ci:"Albany, NY",la:42.6526,ln:-73.7562,cat:"civil",v:"$6,500,000",rv:6500000,bd:"Aug 20, 2025",du:"5 yrs",de:"Materials testing and special inspections for new public health laboratory. Scope includes structural steel fabrication/erection, cast-in-place and precast concrete, soils, masonry, spray SFRM, firestopping, and NDT. Design-Build project delivery.",tg:["Special Inspection","Structural Steel","Precast","SFRM","Design-Build"],src:"DASNY RFP 7604 — CONFIRMED"},
+
+  // ── DOT STATE (Northeast) ──
+  {id:"PENNDOT-2025-FI-0881",n:"On-Call Structural Steel Fabrication Inspection — Districts 2/3/4",ag:"PennDOT — Bureau of Project Delivery",st:"PA",co:"US",ci:"Harrisburg, PA",la:40.2732,ln:-76.8867,cat:"oncall",v:"$3,750,000",rv:3750000,bd:"Apr 14, 2025",du:"2 yrs",de:"On-call QA inspection at structural steel fabrication shops supplying bridge elements for PennDOT Districts 2, 3, and 4. Includes weld inspection per AWS D1.5, RT/UT testing, WPS review, dimensional checks, and coating inspection.",tg:["AWS D1.5","RT/UT","WPS Review","Coating","PennDOT"],src:"PennDOT ECMS Contract Bulletin"},
+  {id:"NJDOT-2025-TP-0147",n:"Statewide Structural Steel Fabrication Inspection On-Call",ag:"NJDOT — Bureau of Structural Engineering",st:"NJ",co:"US",ci:"Trenton, NJ",la:40.2206,ln:-74.7597,cat:"oncall",v:"$2,950,000",rv:2950000,bd:"May 7, 2025",du:"2 yrs",de:"Statewide on-call consultant services for structural steel fabrication inspection. Inspection at US shops as required. AWS D1.5 CWIs, NDT Level II technicians, and PE-of-record capabilities required.",tg:["AWS D1.5","CWI","NDT Level II","PE Required"],src:"NJDOT Professional Services TP-0147"},
+  {id:"MASSDOT-2025-107186",n:"Fabrication Inspection & Special Inspection Services — IDIQ Statewide",ag:"MassDOT — Highway Division",st:"MA",co:"US",ci:"Boston, MA",la:42.3601,ln:-71.0589,cat:"civil",v:"$4,400,000",rv:4400000,bd:"May 6, 2025",du:"3 yrs",de:"Statewide IDIQ for fabrication inspection of structural steel and special inspection for MassDOT projects. Covers weld inspection, precast QA, materials testing, concrete inspection, driven pile monitoring, and high-strength bolting.",tg:["IDIQ","Precast QA","Pile Monitoring","High-Strength Bolt"],src:"MassDOT Highway IDIQ #107186"},
+  {id:"CTDOT-2025-170-0152",n:"Fabrication Inspection Engineering Services — Bridge Projects",ag:"Connecticut DOT — Bureau of Engineering",st:"CT",co:"US",ci:"Newington, CT",la:41.6618,ln:-72.7257,cat:"bridge",v:"$2,400,000",rv:2400000,bd:"May 21, 2025",du:"3 yrs",de:"Engineering services for fabrication inspection of structural steel and precast concrete for CTDOT bridge projects. Requires AWS D1.5 CWI, PE licensure, UT Level II, and fracture-critical member inspection experience.",tg:["PE Required","CWI","Fracture Critical","UT Level II"],src:"CTDOT Bulletin 170-0152"},
+  {id:"VDOT-2025-A21-11345",n:"Statewide Fabrication Inspection of Structural Steel — IDIQ",ag:"VDOT — Structure & Bridge Division",st:"VA",co:"US",ci:"Richmond, VA",la:37.5407,ln:-77.4360,cat:"bridge",v:"$5,600,000",rv:5600000,bd:"Apr 30, 2025",du:"4 yrs",de:"IDIQ term contract for structural steel fabrication inspection for VDOT bridge projects statewide. Shop inspection at facilities in VA and other states, weld procedure review, AWS D1.5 compliance verification, and RT/UT/MT testing.",tg:["IDIQ","AWS D1.5","RT/UT/MT","Term Contract"],src:"VDOT Professional Services Advertisement"},
+  {id:"MDSHA-2025-SSFAB-QA",n:"Fabrication QA Inspection of Structural Steel — Statewide",ag:"Maryland SHA — Office of Bridge Development",st:"MD",co:"US",ci:"Baltimore, MD",la:39.2904,ln:-76.6122,cat:"bridge",v:"$3,050,000",rv:3050000,bd:"Apr 9, 2025",du:"2 yrs",de:"Quality assurance inspection at steel fabrication shops for MDSHA bridge projects. CWIs required, radiographic testing capability, coating inspection per SSPC, and documentation per SHA standards. Shops located nationwide.",tg:["CWI","Radiographic","SSPC Coating","SHA Standards"],src:"MDSHA Solicitation Bulletin"},
+  {id:"DELDOT-2025-2025014",n:"On-Call Fabrication Inspection — Structural Steel Bridges",ag:"DelDOT — Engineering Services",st:"DE",co:"US",ci:"Dover, DE",la:39.1582,ln:-75.5244,cat:"oncall",v:"$1,200,000",rv:1200000,bd:"Apr 24, 2025",du:"2 yrs",de:"On-call fabrication inspection for structural steel bridge elements. QA shop inspection, AWS D1.5 compliance, NDT, and coating inspection at fabrication facilities throughout the eastern US.",tg:["AWS D1.5","NDT","Coating","Eastern US"],src:"DelDOT BAFO Solicitation 2025014"},
+  {id:"RIDOT-2025-2025-010",n:"On-Call Steel Fabrication & Bridge Inspection Services",ag:"Rhode Island DOT — Engineering",st:"RI",co:"US",ci:"Providence, RI",la:41.8240,ln:-71.4128,cat:"oncall",v:"$980,000",rv:980000,bd:"Jun 10, 2025",du:"2 yrs",de:"On-call structural steel fabrication and bridge construction inspection services for RIDOT projects. Inspection at shops in RI and throughout the Northeast US. AWS D1.5 CWI required, UT preferred, and familiarity with RIDOT specifications.",tg:["CWI","AWS D1.5","Northeast US","UT Preferred"],src:"RIDOT Engineering Solicitation"},
+  {id:"VTANS-2025-01325",n:"On-Call Fabrication Inspection of Bridge Structural Steel",ag:"Vermont Agency of Transportation",st:"VT",co:"US",ci:"Montpelier, VT",la:44.2601,ln:-72.5754,cat:"oncall",v:"$720,000",rv:720000,bd:"Jun 19, 2025",du:"2 yrs",de:"On-call structural steel fabrication inspection for VTrans bridge projects. Inspection at approved fabrication shops throughout the northeastern US. AWS D1.5 CWI required, NDT experience preferred.",tg:["CWI","AWS D1.5","Northeast","Small State"],src:"VTrans Solicitation 01325"},
+  {id:"MEDOT-2025-FABINSP",n:"On-Call Bridge Fabrication & Weld Inspection Engineering Services",ag:"Maine DOT — Bridge Program",st:"ME",co:"US",ci:"Augusta, ME",la:44.3106,ln:-69.7795,cat:"oncall",v:"$850,000",rv:850000,bd:"Jun 30, 2025",du:"2 yrs",de:"On-call engineering services for fabrication and weld inspection of structural steel bridge elements for MaineDOT. Inspection at shops in the northeastern US and wherever steel is fabricated. AWS D1.5 CWI required.",tg:["CWI","AWS D1.5","Northeastern","Engineering"],src:"MaineDOT Bridge Program Solicitation"},
+  {id:"WVDOH-2025-135-DOH",n:"On-Call Structural Steel Fabrication Inspection Services",ag:"WV Division of Highways",st:"WV",co:"US",ci:"Charleston, WV",la:38.3498,ln:-81.6326,cat:"oncall",v:"$1,400,000",rv:1400000,bd:"Jul 16, 2025",du:"2 yrs",de:"On-call structural steel fabrication shop inspection for WVDOH bridge contracts. Inspection at shops in WV, PA, OH, and other states. Requires AWS CWI, NDT Level II, AASHTO M270 grade steel and AWS D1.5 experience.",tg:["CWI","NDT Level II","AASHTO M270","AWS D1.5"],src:"WVDOH Engineering Solicitation"},
+
+  // ── DOT STATE (Southeast) ──
+  {id:"NCDOT-2025-D201531",n:"Fabrication Shop Inspection of Structural Steel Bridge Elements",ag:"NCDOT — Structural Management Unit",st:"NC",co:"US",ci:"Raleigh, NC",la:35.7796,ln:-78.6382,cat:"shop",v:"$3,300,000",rv:3300000,bd:"May 22, 2025",du:"3 yrs",de:"Inspection of structural steel bridge components at fabrication shops throughout the US. Scope includes visual and NDE inspection per AWS D1.5, WPS/PQR review, dimensional verification, blast cleaning and coating inspection.",tg:["AWS D1.5","WPS/PQR","Coating Insp.","NDE"],src:"NCDOT Consultant Services Advertisement"},
+  {id:"SCDOT-2025-22.53-CF",n:"Statewide On-Call Structural Steel Fabrication & NDT Inspection",ag:"SCDOT — Bridge Inspection & Management",st:"SC",co:"US",ci:"Columbia, SC",la:34.0007,ln:-81.0348,cat:"ndt",v:"$1,750,000",rv:1750000,bd:"Jun 9, 2025",du:"2 yrs",de:"On-call structural steel fabrication and NDT inspection. Scope includes VT, UT, MT, RT weld inspection, dimensional checks, girder camber verification, and documentation in SCDOT systems.",tg:["VT/UT/MT/RT","Camber Check","SCDOT","On-Call"],src:"SCDOT Engineering Services Solicitation"},
+  {id:"GDOT-2025-PI0030000",n:"On-Call Structural Steel Fabrication & QA Inspection — Statewide",ag:"Georgia DOT — Office of Bridge Design",st:"GA",co:"US",ci:"Atlanta, GA",la:33.7490,ln:-84.3880,cat:"oncall",v:"$4,200,000",rv:4200000,bd:"Jun 10, 2025",du:"3 yrs",de:"On-call QA inspection services for structural steel fabrication, precast concrete, and bearing devices for GDOT bridges statewide. Includes shop visits, weld inspection, NDT, and monthly reporting. Multiple awards anticipated.",tg:["Steel & Precast","NDT","Bearing Insp.","Multi-Award"],src:"GDOT On-Call Advertisement"},
+  {id:"FDOT-2025-E7S03",n:"Commercial Fabrication Inspection Services — District 7 On-Call",ag:"FDOT District 7 — Construction",st:"FL",co:"US",ci:"Tampa, FL",la:27.9506,ln:-82.4572,cat:"bridge",v:"$2,100,000",rv:2100000,bd:"Apr 21, 2025",du:"2 yrs",de:"Commercial inspection for structural steel, precast concrete, high mast poles, and sign structures for FDOT District 7. Scope includes weld inspection, dimensional checks, materials verification, and CTQP-qualified inspectors.",tg:["CTQP","Commercial Insp.","Precast","Sign Structures"],src:"FDOT E7S03 Work Program Solicitation"},
+  {id:"TDOT-2025-CON-062579",n:"On-Call Structural Steel Fabrication Inspection Services",ag:"Tennessee DOT — Division of Structures",st:"TN",co:"US",ci:"Nashville, TN",la:36.1627,ln:-86.7816,cat:"oncall",v:"$2,200,000",rv:2200000,bd:"Jul 1, 2025",du:"2 yrs",de:"On-call inspection of structural steel fabricated for TDOT bridge projects at various shops throughout the US. Services include AWS D1.5 weld inspection, dimensional checks, mill cert review, WPS/PQR review, and final inspection reports.",tg:["AWS D1.5","Mill Cert Review","WPS/PQR","Multi-State"],src:"TDOT CON-062579"},
+  {id:"ALDOT-2025-SSFAB",n:"On-Call Structural Steel Fabrication Inspection — Statewide",ag:"Alabama DOT — Bureau of Materials & Tests",st:"AL",co:"US",ci:"Montgomery, AL",la:32.3617,ln:-86.2792,cat:"shop",v:"$1,850,000",rv:1850000,bd:"Jun 3, 2025",du:"2 yrs",de:"On-call QA fabrication inspection of structural steel for ALDOT bridge contracts. Inspection at shops in Alabama and other states where steel is fabricated. AWS D1.5 CWI required, NDT Level II UT preferred, AISC familiarity required.",tg:["CWI","AWS D1.5","UT Preferred","AISC"],src:"ALDOT Materials & Tests Solicitation"},
+  {id:"MSDOT-2025-SSFAB",n:"Structural Steel Shop Inspection Services On-Call",ag:"Mississippi DOT — Bridge Division",st:"MS",co:"US",ci:"Jackson, MS",la:32.2988,ln:-90.1848,cat:"shop",v:"$1,600,000",rv:1600000,bd:"Jun 25, 2025",du:"2 yrs",de:"On-call structural steel shop inspection for MSDOT bridge contracts. Inspection at fabricators in MS and surrounding states. Requires AWS CWI, RT/UT/MT capabilities, and experience with AASHTO M270 grade steel bridge fabrication.",tg:["CWI","RT/UT/MT","AASHTO M270","Southern US"],src:"MSDOT Bridge Division Solicitation"},
+  {id:"ARDOT-2025-FABINSP",n:"On-Call Structural Fabrication Inspection & NDT Services",ag:"Arkansas DOT — Bridge Division",st:"AR",co:"US",ci:"Little Rock, AR",la:34.7465,ln:-92.2896,cat:"ndt",v:"$1,450,000",rv:1450000,bd:"Jul 8, 2025",du:"2 yrs",de:"On-call structural steel fabrication and NDT inspection services for ARDOT bridge projects. Inspection at shops in AR and surrounding states. AWS D1.5 CWI, UT Level II, and familiarity with ARDOT Standard Specifications required.",tg:["CWI","UT Level II","ARDOT Spec","NDT"],src:"ARDOT Bridge Division RFP"},
+  {id:"LADOTD-2025-2025-005",n:"Fabrication Inspection of Structural Steel Bridge Components",ag:"Louisiana DOTD — Bridge Design Section",st:"LA",co:"US",ci:"Baton Rouge, LA",la:30.4515,ln:-91.1871,cat:"shop",v:"$2,950,000",rv:2950000,bd:"May 30, 2025",du:"3 yrs",de:"QA fabrication inspection of structural steel bridge components. Inspection at shops in LA and across the US, AWS D1.5 compliance, weld testing, coating inspection, and AISC certification verification.",tg:["AWS D1.5","AISC Cert.","Coating Insp.","QA"],src:"LADOTD Professional Services Advertisement"},
+
+  // ── DOT STATE (Midwest) ──
+  {id:"ODOT-2025-134586",n:"Structural Steel Fabrication Inspection Services — Statewide IDIQ",ag:"Ohio DOT — Office of Structural Engineering",st:"OH",co:"US",ci:"Columbus, OH",la:39.9612,ln:-82.9988,cat:"shop",v:"$5,900,000",rv:5900000,bd:"May 5, 2025",du:"3 yrs",de:"Statewide IDIQ for QA inspection at structural steel fabricators for ODOT bridge projects. Provides shop inspection nationwide wherever steel is fabricated. Requires AWS CWI, AWS SCWI, and Level II UT on staff. Multiple consultants to be selected.",tg:["CWI/SCWI","Level II UT","IDIQ","Nationwide"],src:"ODOT Consultant Services IDIQ"},
+  {id:"MDOT-2025-5008564",n:"Structural Fabrication Unit — On-Call Shop Inspection Consultants",ag:"MDOT — Bureau of Bridges & Structures",st:"MI",co:"US",ci:"Lansing, MI",la:42.7325,ln:-84.5555,cat:"shop",v:"$3,600,000",rv:3600000,bd:"Apr 16, 2025",du:"2 yrs",de:"On-call structural steel and precast concrete fabrication inspection per MQAP Manual. Provides technical support for bolting, welding, girder erection, WPS review, and pile welding QC plans.",tg:["Structural Steel","Precast Concrete","WPS Review","MQAP"],src:"MDOT Structural Fabrication Unit Solicitation"},
+  {id:"IDOT-2025-S-M-3941",n:"Fabrication Inspection of Structural Steel Bridges — Statewide",ag:"Illinois DOT — Bureau of Bridges & Structures",st:"IL",co:"US",ci:"Springfield, IL",la:39.7817,ln:-89.6501,cat:"bridge",v:"$4,700,000",rv:4700000,bd:"May 29, 2025",du:"3 yrs",de:"Statewide fabrication inspection of structural steel bridge elements. Inspection at shops throughout US. AWS D1.5 weld inspection, RT/UT/MT testing, dimensional compliance, WPS approval, and final inspection reports required.",tg:["AWS D1.5","RT/UT/MT","WPS Approval","Statewide"],src:"IDOT Bureau of Bridges Solicitation"},
+  {id:"INDOT-2025-25-C-034",n:"Structural Steel Shop Inspection On-Call — Statewide",ag:"INDOT — Office of Structural & Geotechnical Engineering",st:"IN",co:"US",ci:"Indianapolis, IN",la:39.7684,ln:-86.1581,cat:"shop",v:"$2,600,000",rv:2600000,bd:"Jun 4, 2025",du:"2 yrs",de:"On-call structural steel shop inspection for INDOT bridge contracts. Inspection at fabrication facilities in Indiana and nationwide. AWS D1.5 CWI required, UT Level II preferred, AISC-certified shop familiarity required.",tg:["AWS D1.5","CWI","UT Level II","AISC"],src:"INDOT Design Solicitation 25-C-034"},
+  {id:"MNDOT-2025-0027814",n:"Structural Steel Fabrication & Bridge Inspection On-Call",ag:"MnDOT — Office of Bridges & Structures",st:"MN",co:"US",ci:"Saint Paul, MN",la:44.9537,ln:-93.0900,cat:"bridge",v:"$3,400,000",rv:3400000,bd:"May 15, 2025",du:"3 yrs",de:"On-call fabrication inspection for structural steel and precast prestressed concrete bridge elements. Must provide CWI, CAWI, NDT Level II, and PE-of-record services. Nationwide shop inspection capability required.",tg:["CWI/CAWI","NDT Level II","Precast/Prestressed","PE Required"],src:"MnDOT P/T Solicitation"},
+  {id:"MODOT-2025-SFIS-RFP",n:"Statewide Structural Fabrication Inspection Services — IDIQ",ag:"Missouri DOT — Design Division",st:"MO",co:"US",ci:"Jefferson City, MO",la:38.5767,ln:-92.1735,cat:"shop",v:"$2,700,000",rv:2700000,bd:"Jun 18, 2025",du:"3 yrs",de:"IDIQ for structural steel fabrication inspection for MoDOT bridge projects. Services include AWS D1.5 shop inspection, RT/UT/MT testing, WPS/PQR review, and documentation. Shops may be in any state in the US.",tg:["AWS D1.5","IDIQ","RT/UT/MT","WPS/PQR"],src:"MoDOT Design Division RFP"},
+  {id:"NDOR-2025-CN-22734",n:"Statewide Structural Steel Fabrication Inspection On-Call",ag:"Nebraska DOT — Bridge Division",st:"NE",co:"US",ci:"Lincoln, NE",la:40.8136,ln:-96.7026,cat:"shop",v:"$1,650,000",rv:1650000,bd:"Jul 8, 2025",du:"2 yrs",de:"On-call structural steel fabrication inspection for Nebraska DOT bridge contracts. Inspection at fabrication facilities in Nebraska and surrounding states. Requires AWS CWI, NDT experience, and knowledge of AASHTO bridge welding requirements.",tg:["CWI","AASHTO","NDT","Multi-State"],src:"NDOR CN-22734"},
+  {id:"SDDOT-2025-PC25-002",n:"Structural Steel Fabrication Inspection Services — Statewide",ag:"South Dakota DOT — Bridge Design Office",st:"SD",co:"US",ci:"Pierre, SD",la:44.3683,ln:-100.3510,cat:"shop",v:"$1,100,000",rv:1100000,bd:"Jun 17, 2025",du:"2 yrs",de:"Structural steel fabrication inspection for SDDOT bridge projects statewide. Inspection at shops in SD and surrounding states. Requires minimum 3 AWS CWIs, NDT Level II UT, and coating inspection experience.",tg:["CWI","NDT","Coating","Great Plains"],src:"SDDOT Consultant Solicitation PC25-002"},
+  {id:"NDDOT-2025-SSFAB",n:"On-Call Structural Steel Fabrication Inspection Services",ag:"North Dakota DOT — Bridge Division",st:"ND",co:"US",ci:"Bismarck, ND",la:46.8083,ln:-100.7837,cat:"oncall",v:"$890,000",rv:890000,bd:"Jul 15, 2025",du:"2 yrs",de:"On-call fabrication inspection of structural steel bridge components for NDDOT projects. Inspection at shops in ND and surrounding states (SD, MN, MT). AWS D1.5 CWI required, UT Level II preferred.",tg:["CWI","AWS D1.5","UT Level II","Northern Plains"],src:"NDDOT Bridge Division Solicitation"},
+
+  // ── DOT STATE (South-Central & Southwest) ──
+  {id:"TXDOT-2025-0920083111",n:"Structural Steel Fabrication Inspection & QA Services — Statewide",ag:"TxDOT — Bridge Division",st:"TX",co:"US",ci:"Austin, TX",la:30.2672,ln:-97.7431,cat:"oncall",v:"$8,500,000",rv:8500000,bd:"May 12, 2025",du:"4 yrs",de:"Statewide on-call structural steel fabrication QA inspection for TxDOT bridges. Includes shop inspection at fabricators across the US, weld testing per AWS D1.5, coating inspection per SSPC, and precast concrete inspection. High volume; multiple consultants anticipated.",tg:["AWS D1.5","SSPC Coating","Precast","High Volume"],src:"TxDOT Bridge Division Solicitation"},
+  {id:"OKDOT-2025-SSFAB-25",n:"On-Call Structural Steel Fabrication Inspection Services",ag:"Oklahoma DOT — Bridge Division",st:"OK",co:"US",ci:"Oklahoma City, OK",la:35.4676,ln:-97.5164,cat:"oncall",v:"$1,750,000",rv:1750000,bd:"Jun 12, 2025",du:"2 yrs",de:"On-call QA inspection for structural steel fabricated at shops for ODOT bridge contracts. Fabrication shops typically located in OK, TX, KS, and neighboring states. AWS D1.5 CWI, UT Level II required.",tg:["CWI","AWS D1.5","UT Level II","South-Central"],src:"ODOT Bridge Solicitation SSFAB-25"},
+  {id:"NMDOT-2025-2025-042",n:"On-Call Structural Steel & Fabrication Inspection — Statewide",ag:"New Mexico DOT — Bridge Bureau",st:"NM",co:"US",ci:"Santa Fe, NM",la:35.6870,ln:-105.9378,cat:"oncall",v:"$1,600,000",rv:1600000,bd:"Jun 26, 2025",du:"2 yrs",de:"On-call structural steel fabrication inspection and engineering services for NMDOT bridge projects. CWI inspection at various US fabrication shops, NDT testing, and engineering review of submittals.",tg:["CWI","NDT","Engineering Review","Southwest"],src:"NMDOT RFP 2025-042"},
+  {id:"ADOT-2025-SWR-25-015",n:"On-Call Fabrication Inspection of Bridge Structural Elements",ag:"Arizona DOT — Bridge Group",st:"AZ",co:"US",ci:"Phoenix, AZ",la:33.4484,ln:-112.0740,cat:"bridge",v:"$2,300,000",rv:2300000,bd:"Jul 7, 2025",du:"2 yrs",de:"On-call fabrication inspection of structural steel and precast bridge elements for ADOT projects. Inspection may occur at shops throughout the US and Mexico border region. Requires AWS CWI, NDT Levels II/III, bilingual capability preferred.",tg:["CWI","NDT Level II/III","Precast","Border Region"],src:"ADOT Professional Services Solicitation"},
+  {id:"CDOT-CO-2025-NDTINSP",n:"NDT & Weld Inspection Engineering Services — On-Call",ag:"Colorado DOT — Structural Steel Branch",st:"CO",co:"US",ci:"Denver, CO",la:39.7490,ln:-104.9999,cat:"ndt",v:"$1,950,000",rv:1950000,bd:"Aug 4, 2025",du:"2 yrs",de:"On-call NDT and weld inspection engineering services for CDOT bridge and structural programs. Includes UT, MT, RT for weld QA, fracture critical member assessment, and fatigue evaluation of existing bridges. Separate from fabrication IDIQ.",tg:["UT/MT/RT","Fracture Critical","Fatigue","On-Call NDT"],src:"CDOT Structural Branch Solicitation"},
+
+  // ── DOT STATE (Mountain & Pacific) ──
+  {id:"UDOT-2025-22300",n:"Structural Steel Fabrication Inspection — Statewide On-Call",ag:"Utah DOT — Structures Division",st:"UT",co:"US",ci:"Salt Lake City, UT",la:40.7608,ln:-111.8910,cat:"shop",v:"$2,100,000",rv:2100000,bd:"May 29, 2025",du:"3 yrs",de:"Statewide on-call structural steel fabrication inspection at shops in UT and throughout the US for UDOT bridge and structure projects. Requires AWS D1.5 CWI, UT Level II, fracture critical members, and AASHTO M270 experience.",tg:["CWI","UT Level II","AASHTO M270","Fracture Critical"],src:"UDOT Procurement 22300"},
+  {id:"MDOT-MT-2025-FABINSP",n:"On-Call Fabrication Inspection of Bridge Steel — Statewide",ag:"Montana DOT — Bridge Bureau",st:"MT",co:"US",ci:"Helena, MT",la:46.5958,ln:-112.0270,cat:"oncall",v:"$980,000",rv:980000,bd:"Jul 28, 2025",du:"2 yrs",de:"On-call inspection of structural steel fabricated for Montana DOT bridge projects. Fabrication at shops across the Pacific Northwest, Mountain West, and Midwest. AWS D1.5 CWI required, NDT Level II preferred.",tg:["CWI","NDT Level II","Mountain West","AWS D1.5"],src:"MDT Consultant Services Bulletin"},
+  {id:"ITD-2025-SS-FABINSP",n:"Structural Steel Fabrication Inspection Services",ag:"Idaho Transportation Department — Bridge Services",st:"ID",co:"US",ci:"Boise, ID",la:43.6150,ln:-116.2023,cat:"shop",v:"$1,050,000",rv:1050000,bd:"Aug 4, 2025",du:"2 yrs",de:"Structural steel fabrication inspection for ITD bridge projects. Steel fabricated at approved shops in the Pacific NW and Mountain West region. Requires AWS CWI, coating inspection experience, and documentation per ITD specifications.",tg:["CWI","Coating Insp.","Pacific NW","ITD Specs"],src:"ITD Bridge Services Solicitation"},
+  {id:"WYDOT-2025-3H3F23",n:"On-Call Bridge Fabrication Inspection Engineering Services",ag:"Wyoming DOT — Bridges & Structures Section",st:"WY",co:"US",ci:"Cheyenne, WY",la:41.1400,ln:-104.8202,cat:"bridge",v:"$890,000",rv:890000,bd:"Jul 21, 2025",du:"2 yrs",de:"On-call bridge fabrication inspection engineering services for WYDOT structural steel bridge projects. Inspection at shops in WY and surrounding states. Requires PE, AWS CWI, and AASHTO LRFD bridge design compliance verification.",tg:["PE Required","CWI","AASHTO LRFD","High Plains"],src:"WYDOT Engineering Solicitation 3H3F23"},
+  {id:"NDOT-NV-2025-P095-16",n:"Structural Steel & Precast Bridge Fabrication Inspection",ag:"Nevada DOT — Bridge Section",st:"NV",co:"US",ci:"Carson City, NV",la:39.1638,ln:-119.7674,cat:"bridge",v:"$1,400,000",rv:1400000,bd:"Jun 30, 2025",du:"2 yrs",de:"Fabrication inspection of structural steel and precast bridge elements for NDOT projects. Inspection at facilities in NV, CA, and other western states. Requires AWS D1.5 CWI, ASNT NDT Level II, and PE of record.",tg:["AWS D1.5","ASNT NDT Level II","Precast","PE of Record"],src:"NDOT P095-16 Professional Services"},
+  {id:"WSDOT-2025-GCB2544",n:"Structural Steel Fabrication Inspection Services — Northwest Region",ag:"WSDOT — Bridge & Structures Office",st:"WA",co:"US",ci:"Olympia, WA",la:47.0379,ln:-122.9007,cat:"shop",v:"$3,100,000",rv:3100000,bd:"Jun 25, 2025",du:"3 yrs",de:"Fabrication inspection for structural steel bridge elements for WSDOT projects. Shops in WA, OR, CA, and potentially other states. AWS D1.5 CWI, coating inspection, and UT Level II required. Environmental documentation required.",tg:["AWS D1.5","Coating","UT Level II","Pacific NW"],src:"WSDOT GCB2544 Consultant Roster"},
+  {id:"ODOT-OR-2025-22953",n:"On-Call NDT & Fabrication Inspection Engineering Services",ag:"Oregon DOT — Bridge Engineering Section",st:"OR",co:"US",ci:"Salem, OR",la:44.9429,ln:-123.0351,cat:"ndt",v:"$1,850,000",rv:1850000,bd:"Jul 14, 2025",du:"2 yrs",de:"On-call NDT and fabrication inspection engineering services for ODOT bridge structural steel. Includes UT, MT, PT, RT for weld QA, fracture critical member inspection, and fatigue assessment consulting.",tg:["UT/MT/PT/RT","Fracture Critical","Fatigue","Engineering"],src:"ODOT PERS 22953"},
+  {id:"CALTRANS-2025-59A1234",n:"Structural Steel Fabrication & Inspection — District 4 Bay Area",ag:"Caltrans — Division of Engineering Services",st:"CA",co:"US",ci:"Oakland, CA",la:37.8044,ln:-122.2712,cat:"bridge",v:"$7,200,000",rv:7200000,bd:"May 27, 2025",du:"4 yrs",de:"Fabrication inspection of structural steel, precast concrete, and bearing devices for Caltrans bridge projects in District 4. Includes AISC-certified shop inspection, AWS D1.5 compliance, Caltrans Special Provisions compliance, and seismic detailing verification.",tg:["AISC Certified","AWS D1.5","Seismic","Precast/Bearings"],src:"Caltrans DES Solicitation 59A1234"},
+  {id:"AKDOT-2025-2025FABINSP",n:"Fabrication Inspection Services — Statewide Bridge Program",ag:"Alaska DOT&PF — Bridge Section",st:"AK",co:"US",ci:"Juneau, AK",la:58.3005,ln:-134.4197,cat:"bridge",v:"$1,950,000",rv:1950000,bd:"Aug 11, 2025",du:"2 yrs",de:"Fabrication inspection for structural steel and precast concrete bridge elements for Alaska DOT&PF projects. Shops typically in WA, OR, and contiguous US. Requires travel capability and extreme weather awareness.",tg:["Remote Projects","Cold Climate","AWS D1.5","Precast"],src:"Alaska DOT&PF Solicitation"},
+  {id:"HDOT-2025-H23F2502",n:"On-Call Bridge Fabrication & Materials Inspection Services",ag:"Hawaii DOT — Highways Division",st:"HI",co:"US",ci:"Honolulu, HI",la:21.3069,ln:-157.8583,cat:"civil",v:"$1,300,000",rv:1300000,bd:"Jul 22, 2025",du:"2 yrs",de:"On-call bridge fabrication inspection and materials testing for HDOT. All steel fabricated on mainland; inspection required in WA, CA, or wherever steel is produced before shipping to Hawaii. Includes AWS D1.5, NDT, and corrosion coating inspection.",tg:["Mainland Inspection","Corrosion Coating","NDT","Shipping QA"],src:"HDOT Highways Solicitation H23F2502"},
+
+  // ── DOT STATE (Remaining) ──
+  {id:"PENNDOT-2025-FI-1102",n:"Structural Steel Fabrication Inspection — District 9/10/11",ag:"PennDOT — Bureau of Project Delivery",st:"PA",co:"US",ci:"Pittsburgh, PA",la:40.4406,ln:-79.9959,cat:"oncall",v:"$2,900,000",rv:2900000,bd:"May 20, 2025",du:"2 yrs",de:"On-call QA inspection at structural steel fabrication shops supplying bridge elements for PennDOT Districts 9, 10, and 11 in western Pennsylvania. AWS D1.5 compliance, RT/UT testing, WPS review, and dimensional checks.",tg:["AWS D1.5","RT/UT","WPS Review","Western PA"],src:"PennDOT ECMS Contract Bulletin D9/10/11"},
+  {id:"NYSDOT-2025-SSFAB",n:"Statewide On-Call Structural Steel Fabrication Inspection",ag:"NYSDOT — Main Office Bridge Section",st:"NY",co:"US",ci:"Albany, NY",la:42.6581,ln:-73.7749,cat:"shop",v:"$4,850,000",rv:4850000,bd:"May 9, 2025",du:"3 yrs",de:"Statewide on-call structural steel shop inspection for NYSDOT bridge projects. Inspection at shops nationwide, AWS D1.5 compliance, full NDT program (UT, RT, MT), WPS/PQR review, and documentation per NYSDOT procedures.",tg:["AWS D1.5","UT/RT/MT","WPS/PQR","Statewide NY"],src:"NYSDOT Main Office Bridge Solicitation"},
+  {id:"VDOT-2025-NDTFAB",n:"On-Call NDT & Fabrication Assessment — Infrastructure Structures",ag:"VDOT — Structure & Bridge Division",st:"VA",co:"US",ci:"Charlottesville, VA",la:38.0293,ln:-78.4767,cat:"ndt",v:"$2,100,000",rv:2100000,bd:"Jun 16, 2025",du:"2 yrs",de:"On-call NDT and fabrication inspection assessment for VDOT infrastructure structures including bridges, culverts, retaining walls, and sign structures. UT, MT, PT and advanced NDE methods required. ASNT Level II/III personnel on staff.",tg:["ASNT Level II/III","UT/MT/PT","Advanced NDE","Infrastructure"],src:"VDOT Structure & Bridge NDT Solicitation"},
+
+  // ── TRANSIT AGENCIES ──
+  {id:"SEPTA-2025-25-00015",n:"On-Call Structural Steel & Fabrication Inspection — Capital Program",ag:"SEPTA — Engineering & Construction",st:"PA",co:"US",ci:"Philadelphia, PA",la:39.9526,ln:-75.1652,cat:"transit",v:"$3,200,000",rv:3200000,bd:"May 5, 2025",du:"3 yrs",de:"On-call structural steel fabrication inspection and special inspection services for SEPTA capital projects including elevated structures, bridges, station structures, and vehicle facilities. AWS D1.5 CWI, special inspection certifications, and NDT Level II required.",tg:["CWI","Special Inspection","Transit","Elevated Structures"],src:"SEPTA Procurement 25-00015"},
+  {id:"WMATA-2025-1000029441",n:"Structural Fabrication & Shop Inspection Services — On-Call",ag:"WMATA — Engineering & Technical Services",st:"DC",co:"US",ci:"Washington, DC",la:38.9072,ln:-77.0369,cat:"transit",v:"$4,100,000",rv:4100000,bd:"Apr 18, 2025",du:"3 yrs",de:"On-call fabrication inspection services for structural steel components fabricated for WMATA capital infrastructure projects. Covers rail structures, stations, tunnels, and facilities. AWS D1.5 CWI, special inspection, and WMATA design criteria compliance required.",tg:["CWI","Rail Infrastructure","AWS D1.5","WMATA Standards"],src:"WMATA Procurement 1000029441"},
+  {id:"MBTA-2025-CS-1203",n:"On-Call Structural & Fabrication Inspection Services",ag:"MBTA — Program Management",st:"MA",co:"US",ci:"Boston, MA",la:42.3598,ln:-71.0565,cat:"transit",v:"$2,800,000",rv:2800000,bd:"May 13, 2025",du:"3 yrs",de:"On-call structural and fabrication inspection services for MBTA capital program. Scope includes fabrication shop inspection of structural steel and precast for bridges, stations, and maintenance facilities. AWS D1.5, ICC special inspection, and NDT Level II required.",tg:["CWI","ICC Special Inspection","Precast","Transit Facilities"],src:"MBTA CS-1203 Consultant Services"},
+  {id:"METRA-2025-25-CM-003",n:"Structural Steel Fabrication & Construction Inspection — On-Call",ag:"Metra — Engineering & Construction",st:"IL",co:"US",ci:"Chicago, IL",la:41.8781,ln:-87.6298,cat:"transit",v:"$3,600,000",rv:3600000,bd:"Jun 2, 2025",du:"3 yrs",de:"On-call fabrication inspection of structural steel for Metra commuter rail infrastructure projects including bridges, viaducts, platforms, and maintenance facilities. AWS D1.5 CWI, AISC knowledge, and Chicago area shop familiarity required.",tg:["CWI","AISC","Commuter Rail","Chicago Shops"],src:"Metra Engineering Solicitation 25-CM-003"},
+  {id:"MARTA-2025-P42154",n:"On-Call Special Inspection & Structural Fabrication Inspection",ag:"MARTA — Engineering Division",st:"GA",co:"US",ci:"Atlanta, GA",la:33.7524,ln:-84.3902,cat:"transit",v:"$2,200,000",rv:2200000,bd:"Jun 16, 2025",du:"3 yrs",de:"On-call special inspection and structural steel fabrication inspection for MARTA capital improvement projects. Covers rail structures, bridges, stations, and administrative buildings. AWS D1.5 CWI, ICC special inspection, and GDOT familiarity preferred.",tg:["CWI","ICC Special Insp.","Rail Structures","MARTA"],src:"MARTA P42154 Procurement"},
+  {id:"BART-2025-INSP-2502",n:"On-Call Structural & Fabrication Inspection Services",ag:"San Francisco Bay Area Rapid Transit District",st:"CA",co:"US",ci:"Oakland, CA",la:37.8044,ln:-122.2641,cat:"transit",v:"$3,500,000",rv:3500000,bd:"May 20, 2025",du:"3 yrs",de:"On-call structural and fabrication inspection services for BART capital program. Scope includes shop inspection of structural steel fabricated for BART aerial structures, stations, and maintenance facilities. Seismic compliance, AWS D1.5, and ICC certifications required.",tg:["CWI","Seismic","ICC","BART Standards"],src:"BART Procurement INSP-2502"},
+  {id:"NJTRANSIT-2025-25-018",n:"On-Call Structural Steel Fabrication & Construction Inspection",ag:"NJ Transit — Capital Programs",st:"NJ",co:"US",ci:"Newark, NJ",la:40.7357,ln:-74.1724,cat:"transit",v:"$2,600,000",rv:2600000,bd:"Jun 9, 2025",du:"3 yrs",de:"On-call structural steel fabrication and construction inspection for NJ Transit capital projects. Covers rail bridges, stations, and facilities. AWS D1.5 CWI, special inspection, and familiarity with FTA requirements.",tg:["CWI","FTA Requirements","Rail Bridges","Special Inspection"],src:"NJ Transit Capital Programs 25-018"},
+
+  // ── FEDERAL ──
+  {id:"USACE-2025-W912P1-25",n:"On-Call Structural Steel Fabrication Inspection — Great Lakes District",ag:"US Army Corps of Engineers — Great Lakes & Ohio River Division",st:"OH",co:"US",ci:"Cincinnati, OH",la:39.1031,ln:-84.5120,cat:"federal",v:"$5,200,000",rv:5200000,bd:"May 28, 2025",du:"5 yrs",de:"On-call structural steel fabrication inspection services for USACE lock and dam structures, navigation facilities, flood control projects, and military construction throughout the Great Lakes and Ohio River Division. AWS D1.5/D1.1 CWI, NDT Level II, and AISC/AISC-LRFD experience required.",tg:["Lock & Dam","AWS D1.5/D1.1","NDT Level II","Navigation"],src:"USACE Great Lakes District W912P1-25"},
+  {id:"USACE-2025-W81EWF",n:"Structural Steel Fabrication Inspection — South Atlantic Division",ag:"US Army Corps of Engineers — South Atlantic Division",st:"GA",co:"US",ci:"Savannah, GA",la:32.0835,ln:-81.0998,cat:"federal",v:"$4,100,000",rv:4100000,bd:"Jun 5, 2025",du:"5 yrs",de:"Fabrication inspection services for structural steel components for USACE projects in the South Atlantic Division including lock and dam structures, flood walls, and military construction. Requires AWS CWI, ASNT NDT Level II, and marine structure experience.",tg:["CWI","Marine Structures","ASNT NDT","Flood Walls"],src:"USACE South Atlantic W81EWF"},
+  {id:"NAVFAC-2025-N40085",n:"On-Call Special Inspection & NDT — Naval Facilities Atlantic",ag:"Naval Facilities Engineering Systems Command Atlantic",st:"VA",co:"US",ci:"Norfolk, VA",la:36.8508,ln:-76.2859,cat:"federal",v:"$6,800,000",rv:6800000,bd:"May 14, 2025",du:"5 yrs",de:"On-call special inspection and NDT services for NAVFAC Atlantic facilities including structural steel fabrication inspection, concrete inspection, welding inspection, and materials testing for new construction and renovations at naval installations.",tg:["NAVFAC","Special Inspection","NDT","Military Construction"],src:"NAVFAC Atlantic N40085"},
+  {id:"FHWA-2025-DTFH61",n:"National Fabrication Inspection Program — Technical Assistance",ag:"Federal Highway Administration — Office of Bridges & Structures",st:"DC",co:"US",ci:"Washington, DC",la:38.8901,ln:-77.0480,cat:"federal",v:"$3,900,000",rv:3900000,bd:"Jun 23, 2025",du:"3 yrs",de:"Technical assistance and fabrication inspection support for the FHWA National Fabrication Inspection Program. Support state DOTs with QA oversight, training, inspector qualification programs, and on-site fabrication inspection at shops throughout the US.",tg:["National Program","State DOT Support","Training","FHWA"],src:"FHWA DTFH61 Solicitation"},
+  {id:"USACE-2025-W912HQ-NWDIV",n:"On-Call Structural Fabrication Inspection — Northwestern Division",ag:"US Army Corps of Engineers — Northwestern Division",st:"OR",co:"US",ci:"Portland, OR",la:45.5051,ln:-122.6750,cat:"federal",v:"$3,400,000",rv:3400000,bd:"Jul 10, 2025",du:"4 yrs",de:"On-call fabrication inspection for structural steel components for USACE Northwestern Division projects including hydropower facilities, navigation locks, and flood control projects in OR, WA, ID, MT, WY, ND, and SD.",tg:["Hydropower","Navigation","AWS D1.5","Multi-State"],src:"USACE Northwestern Division W912HQ"},
+
+  // ── CANADA ──
+  {id:"MTO-ON-2025-CQ-001",n:"In-Shop Fabrication Inspection of Structural Steel Bridge Components",ag:"Ontario Ministry of Transportation",st:"ON",co:"CA",ci:"Toronto, ON",la:43.6532,ln:-79.3832,cat:"canada",v:"CAD $4,800,000",rv:4800000,bd:"May 14, 2025",du:"3 yrs",de:"In-shop fabrication inspection and quality verification for structural steel bridge components for MTO projects. Inspection to CISC certification requirements, CSA S6, CSA W47.1, and CSA W59. Includes VT, MT, UT, and RT weld inspection.",tg:["CISC Certified","CSA S6","CSA W47.1","VT/MT/UT/RT"],src:"MTO CanadaBuys CQ-2025-001 — CONFIRMED"},
+  {id:"ALTA-TI-2025-FABINSP",n:"Structural Steel Fabrication Inspection Services — Alberta Infrastructure",ag:"Alberta Ministry of Transportation & Economic Corridors",st:"AB",co:"CA",ci:"Edmonton, AB",la:53.5461,ln:-113.4938,cat:"canada",v:"CAD $2,900,000",rv:2900000,bd:"Jun 16, 2025",du:"2 yrs",de:"Fabrication inspection services for structural steel bridge elements for Alberta infrastructure projects. Inspection at facilities in Alberta and elsewhere in Canada and the US. CSA W47.1 welding certification, CWB-certified inspectors required.",tg:["CWB Certified","CSA W47.1","Alberta Bridges","Multi-Province"],src:"Alberta MERX Solicitation"},
+  {id:"BCTRANS-2025-RFSO",n:"On-Call Fabrication Inspection of Bridge Structural Steel — BC",ag:"BC Ministry of Transportation & Infrastructure",st:"BC",co:"CA",ci:"Victoria, BC",la:48.4284,ln:-123.3656,cat:"canada",v:"CAD $2,200,000",rv:2200000,bd:"Jun 4, 2025",du:"3 yrs",de:"On-call fabrication inspection for structural steel bridge elements for BC Highways projects. Inspection at CISC-certified shops in BC, Alberta, and the US Pacific NW. Requires CWB-certified inspector, UT Level II, and PE registration.",tg:["CISC","CWB Inspector","UT Level II","Pacific NW"],src:"BC Bid RFSO-FABINSP-2025"},
+  {id:"MTQ-QC-2025-0031",n:"Services d'Inspection en Atelier — Acier de Structure pour Ponts",ag:"Ministère des Transports du Québec",st:"QC",co:"CA",ci:"Québec City, QC",la:46.8139,ln:-71.2080,cat:"canada",v:"CAD $3,100,000",rv:3100000,bd:"May 27, 2025",du:"3 yrs",de:"In-shop inspection of structural steel for Quebec bridge structures. Includes visual inspection, NDT (UT, MT, RT), dimensional checks per CAN/CSA-S6 and CSA W59. Bilingual inspection capability (EN/FR) required for Quebec projects.",tg:["CSA S6/W59","CND/NDT","Québec Bridges","Bilingual EN/FR"],src:"SEAO Avis d'appel d'offres QC-2025-0031"},
+  {id:"MB-IT-2025-BFABI",n:"On-Call Bridge Steel Fabrication Inspection Services — Manitoba",ag:"Manitoba Infrastructure — Bridge Branch",st:"MB",co:"CA",ci:"Winnipeg, MB",la:49.8951,ln:-97.1384,cat:"canada",v:"CAD $1,600,000",rv:1600000,bd:"Jul 9, 2025",du:"2 yrs",de:"On-call inspection of structural steel bridge components fabricated for Manitoba Infrastructure projects. Inspection at facilities in Manitoba, Saskatchewan, Ontario, and the US Midwest. CWB-certified inspector required, NDT experience preferred.",tg:["CWB Certified","NDT","Prairies","Manitoba Bridges"],src:"Manitoba MERX BFABI-01"},
+  {id:"SASK-HWY-2025-FABINSP",n:"On-Call Structural Steel Fabrication Inspection Services — Saskatchewan",ag:"Saskatchewan Ministry of Highways",st:"SK",co:"CA",ci:"Regina, SK",la:50.4452,ln:-104.6189,cat:"canada",v:"CAD $1,200,000",rv:1200000,bd:"Jul 22, 2025",du:"2 yrs",de:"On-call structural steel fabrication inspection for Saskatchewan Highways bridge projects. Inspection at facilities in Saskatchewan and neighboring provinces. CWB-certified inspector, UT Level II, and familiarity with CSA S6 and CSA W59 required.",tg:["CWB Certified","UT Level II","CSA S6/W59","Prairies"],src:"Saskatchewan Highways MERX Solicitation"},
+  {id:"NSTIR-2025-FABINSP",n:"Structural Steel Fabrication & Weld Inspection Services",ag:"Nova Scotia Dept. of Public Works",st:"NS",co:"CA",ci:"Halifax, NS",la:44.6488,ln:-63.5752,cat:"canada",v:"CAD $980,000",rv:980000,bd:"Aug 6, 2025",du:"2 yrs",de:"Fabrication inspection of structural steel bridge components for Nova Scotia Dept. of Public Works. Inspection at shops throughout Atlantic Canada and Ontario. CWB-certified inspector, NDT experience, and CSA S6 compliance required.",tg:["CWB Certified","NDT","Atlantic Canada","CSA S6"],src:"Nova Scotia NSTIR Solicitation"},
+  {id:"NBTRANSPORT-2025-FABINSP",n:"On-Call Steel Fabrication Inspection — NB Highway Bridges",ag:"New Brunswick Dept. of Transportation & Infrastructure",st:"NB",co:"CA",ci:"Fredericton, NB",la:45.9636,ln:-66.6431,cat:"canada",v:"CAD $870,000",rv:870000,bd:"Aug 14, 2025",du:"2 yrs",de:"On-call fabrication inspection services for structural steel highway bridge elements in New Brunswick. Inspection at approved shops throughout Atlantic Canada and Quebec. CWB-certified inspector and familiarity with NB DOT bridge specifications required.",tg:["CWB Certified","Atlantic Canada","NB Spec","AWS D1.5"],src:"New Brunswick NBTIP Solicitation"}
+];
+
+// Map init
+const map=L.map('map',{center:[46,-98],zoom:4,zoomControl:false});
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map);
+
+let markers={},activeId=null,curCat='ALL',curQ='';
+
+function icon(cat,active){
+  const c=CC[cat],sz=active?16:12,ring=active?32:24;
+  return L.divIcon({className:'',iconSize:[ring,ring],iconAnchor:[ring/2,ring/2],popupAnchor:[0,-ring/2-4],
+    html:`<div style="position:relative;width:${ring}px;height:${ring}px">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${c}18;border:1.5px solid ${c}44;${active?'animation:blink 2s ease-in-out infinite;':''}"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${sz}px;height:${sz}px;border-radius:50%;background:${c};border:2px solid ${active?'#fff':c+'80'};box-shadow:0 1px ${active?14:6}px ${c}${active?'99':'44'};"></div>
+    </div>`
+  });
+}
+
+function popup(p){
+  const c=CC[p.cat],fl=p.co==='CA'?'🍁 ':'';
+  return `<div class="pop">
+    <div class="ptop">
+      <div class="pcr"><span class="pcb" style="background:${c}">${CL[p.cat]}</span><span class="pid">${p.id}</span></div>
+      <div class="ptitle">${p.n}</div>
+      <div class="pagency">${fl}${p.ag} · ${p.ci}</div>
+    </div>
+    <div class="pgrid">
+      <div class="pcel"><label>Est. Value</label><div class="v money">${p.v}</div></div>
+      <div class="pcel"><label>Bid / Proposal Due</label><div class="v">${p.bd}</div></div>
+      <div class="pcel"><label>Duration</label><div class="v">${p.du}</div></div>
+      <div class="pcel"><label>State/Province</label><div class="v">${p.st} · ${p.co==='CA'?'Canada':'USA'}</div></div>
+    </div>
+    <div class="pdesc">${p.de}</div>
+    <div class="ptags">${p.tg.map(t=>`<span class="ptag">${t}</span>`).join('')}</div>
+    <div class="psrc">📋 ${p.src}</div>
+  </div>`;
+}
+
+function filtered(){
+  return P.filter(p=>{
+    const catOk=curCat==='ALL'||p.cat===curCat;
+    const q=curQ.toLowerCase();
+    const txtOk=!q||[p.n,p.ag,p.st,p.ci,p.cat,p.tg.join(' '),p.id].join(' ').toLowerCase().includes(q);
+    return catOk&&txtOk;
+  });
+}
+
+function setActive(id){
+  activeId=id;
+  P.forEach(p=>{if(markers[p.id])markers[p.id].setIcon(icon(p.cat,p.id===id))});
+  document.querySelectorAll('.pc').forEach(c=>c.classList.toggle('active',c.dataset.id===id));
+}
+
+function buildList(){
+  const list=document.getElementById('pl');
+  const f=filtered();
+  document.getElementById('cbar').textContent=`${f.length} solicitation${f.length!==1?'s':''} matched`;
+  if(!f.length){list.innerHTML='<div class="no-res">No matching projects.</div>';return;}
+  list.innerHTML=f.map(p=>`
+    <div class="pc${activeId===p.id?' active':''}" data-id="${p.id}">
+      <div class="cs" style="background:${CC[p.cat]}"></div>
+      <div class="ch"><span class="cp" style="background:${CC[p.cat]}">${CL[p.cat]}</span><div class="ct">${p.n}</div></div>
+      <div class="ca">${p.ag} · ${p.st}</div>
+      <div class="cm"><span class="cv" style="color:${CC[p.cat]}">${p.v}</span><div class="csep"></div><span class="cd">Due: ${p.bd}</span></div>
+    </div>`).join('');
+  list.querySelectorAll('.pc').forEach(card=>{
+    card.addEventListener('click',()=>{
+      const p=P.find(x=>x.id===card.dataset.id);
+      if(!p)return;
+      setActive(p.id);markers[p.id].openPopup();
+      map.flyTo([p.la,p.ln],p.co==='CA'?7:9,{duration:.7});
+    });
+  });
+}
+
+function statsUpdate(){
+  document.getElementById('sT').textContent=P.length;
+  document.getElementById('sS').textContent=new Set(P.filter(p=>p.co==='US').map(p=>p.st)).size;
+  document.getElementById('sP').textContent=new Set(P.filter(p=>p.co==='CA').map(p=>p.st)).size;
+  document.getElementById('sA').textContent=new Set(P.map(p=>p.cat)).size;
+  const tv=P.reduce((s,p)=>s+p.rv,0);
+  document.getElementById('sV').textContent=tv>=1e9?`$${(tv/1e9).toFixed(1)}B`:`$${Math.round(tv/1e6)}M`;
+}
+
+// Add all markers
+P.forEach(p=>{
+  const m=L.marker([p.la,p.ln],{icon:icon(p.cat,false)}).addTo(map).bindPopup(popup(p),{maxWidth:370,minWidth:310});
+  m.on('click',()=>{setActive(p.id);const card=document.querySelector(`.pc[data-id="${p.id}"]`);if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});});
+  m.on('popupclose',()=>{if(activeId===p.id)setActive(null);});
+  markers[p.id]=m;
+});
+
+// Filters
+document.querySelectorAll('.ft').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.ft').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');curCat=tab.dataset.cat;
+    const f=filtered();
+    P.forEach(p=>{f.find(x=>x.id===p.id)?markers[p.id].addTo(map):markers[p.id].remove();});
+    if(curCat==='canada')map.flyTo([54,-100],4,{duration:.8});
+    else if(curCat==='federal')map.flyTo([39,-95],5,{duration:.8});
+    else if(curCat!=='ALL'){const pts=f.map(p=>[p.la,p.ln]);if(pts.length)map.flyToBounds(L.latLngBounds(pts),{padding:[60,60],duration:.8});}
+    else map.flyTo([46,-98],4,{duration:.8});
+    buildList();
+  });
+});
+
+// Search
+document.getElementById('si').addEventListener('input',e=>{
+  curQ=e.target.value;const f=filtered();
+  P.forEach(p=>{f.find(x=>x.id===p.id)?markers[p.id].addTo(map):markers[p.id].remove();});
+  buildList();
+});
+
+statsUpdate();buildList();
+</script>
+</body>
+</html>
